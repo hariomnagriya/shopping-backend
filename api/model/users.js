@@ -10,7 +10,8 @@ const value = {
   gender: String,
   //   DOB: Date,
   resetPasswordToken: String,
-  resetPasswordExpires: Date
+  resetPasswordExpires: Date,
+  // lastLogin:new Date()
 };
 
 const UserModel = mongoose.model("User", value);

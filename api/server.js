@@ -4,6 +4,8 @@ const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 mongoose.connect("mongodb://localhost/product", { useNewUrlParser: true });
 const User = require("./model/users");
+const Product = require("./model/product");
+const Category = require("./model/category");
 const cors = require("cors");
 var bcrypt = require("bcrypt");
 const crypto = require("crypto");
@@ -77,15 +79,15 @@ app.post(
       .isLength({ min: 6 })
       .withMessage("must be at least 6 chars long")
       .isLength({ max: 10 })
-      .withMessage("max length of password is 10"),
-    //   .custom((value, { req }) => {
-    //     if (value !== req.body.confirmPassword) {
-    //       throw new Error("Password confirmation is incorrect");
-    //     } else {
-    //       return value;
-    //     }
-    //   })
-    //   .withMessage("password didn't match"),
+      .withMessage("max length of password is 10")
+      .custom((value, { req }) => {
+        if (value !== req.body.confirmPassword) {
+          throw new Error("Password confirmation is incorrect");
+        } else {
+          return value;
+        }
+      })
+      .withMessage("password didn't match"),
     check("mobile_no")
       .not()
       .isEmpty()
@@ -176,6 +178,7 @@ app.post(
     }
   }
 );
+<<<<<<< HEAD
 
 app.post("/forgotPassword", [
   check("email")
@@ -260,10 +263,79 @@ app.post("/forgotPassword", [
         message:
           error.message ||
           "An unexpected error occure while processing your request.",
+=======
+app.get("/getuser", async (req, res) => {
+  // First read existing users.
+  try {
+    const result1 = await User.find();
+    res.status(200).json({
+      result1,
+      message: "Data get."
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        error.message ||
+        "An unexpected error occure while processing your request."
+    });
+  }
+});
+app.post(
+  "/login",
+  [
+    check("email")
+      .not()
+      .isEmpty()
+      .withMessage("Email can't be empty")
+      .isEmail()
+      .withMessage("Enter the valid email")
+      .trim()
+      .normalizeEmail(),
+    check("password")
+      .not()
+      .isEmpty()
+      .withMessage("Password can't be empty")
+  ],
+  async (req, res) => {
+    try {
+      const { body } = req;
+      const Email = body.email;
+      const Password = body.password;
+      const result = await User.findOne({ email: Email });
+      console.log(result);
+      if (!result) {
+        res.status(400).json({
+          message: "Email is not registerd.",
+          success: false
+        });
+      }
+      const check = bcrypt.compareSync(Password, result.password);
+      if (!check) {
+        res.status(400).json({
+          message: "password didn't match.",
+          success: false
+        });
+      } else {
+        const object = { ...result._doc };
+        var token = jwt.sign(object, "nikita", { expiresIn: "1h" });
+        res.status(200).json({
+          token,
+          result,
+          message: "Logged in successfully!",
+          success: true
+        });
+      }
+    } catch (error) {
+      console.log(error);
+
+      res.status(500).json({
+        message: error.message || "unwanted error occurred."
+>>>>>>> 5258cb20f3e49491465b0aa993a002b54fb53f19
       });
     }
   }
 );
+<<<<<<< HEAD
 
 // const Op = Sequelize.Op;
 app.get("/reset/:token1", async (req, res) => {
@@ -358,6 +430,44 @@ app.put("/updatePasswordViaEmail", [
 
 
 var server = app.listen(8080, function () {
+=======
+app.delete("/user/:userId", async (req, res) => {
+  // First read existing users.
+  try {
+    const { params } = req;
+    const result = await User.findByIdAndDelete(params.userId);
+    res.status(200).json({
+      result,
+      message: "Data get."
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        error.message ||
+        "An unexpected error occure while processing your request."
+    });
+  }
+});
+app.post("/category", async (req, res) => {
+  try {
+    const { body } = req;
+    const result = await new Category({ ...body });
+    res.status(200).json({
+      result,
+      message: "category added !"
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: error.message || "unexpeced error occured."
+    });
+  }
+});
+app.delete("/deleteCategory",async(req,res)=>
+{
+  
+})
+var server = app.listen(8080, function() {
+>>>>>>> 5258cb20f3e49491465b0aa993a002b54fb53f19
   var host = server.address().address;
   var port = server.address().port;
   console.log("Example app listening at http://%s:%s", host, port);
