@@ -119,7 +119,6 @@ app.post(
         success: false
       });
     }
-
     try {
       const { body, file } = req;
       const Password = req.body.password;
