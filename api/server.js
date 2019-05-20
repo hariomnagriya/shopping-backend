@@ -102,11 +102,11 @@ app.post(
     check("gender")
       .not()
       .isEmpty()
-      .withMessage("gender is required")
-    // check("file")
-    //   .not()
-    //   .isEmpty()
-    //   .withMessage("image is required")
+      .withMessage("gender is required"),
+    check("file")
+      .not()
+      .isEmpty()
+      .withMessage("image is required")
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -232,8 +232,7 @@ app.post(
       } else {
         const today = new Date();
         var time = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate() + ' / ' + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
-        const user = new User({ ...body, lastLogin: `${time}` });
-        const result = await user.save();
+        const resulte1 = await User.findOneAndUpdate({email:Email},{$set:{lastLogin:time}});
         const object = { ...result._doc };
 
         var token = jwt.sign(object, "nikita", { expiresIn: "1h" });
@@ -253,6 +252,279 @@ app.post(
     }
   }
 );
+
+//Add the Product 
+app.post('/addProduct',upload.single('file'),[
+  //Product-title validation
+  check('name')
+  .not().isEmpty().withMessage('Product name cant be empty.'),
+  // check('productDetail')
+  // .not().isEmpty().withMessage('Product Detail cant be empty.'),
+  // check('productPrice')
+  // .not().isEmpty().withMessage('Product price cant be empty.')
+  // .isNumeric().withMessage('Only contain a numeric value.'),
+  check('price')
+  .not().isEmpty().withMessage('Product  price cant be empty.')
+  .isNumeric().withMessage('only contain a numeric value.'),
+  // check('file')
+  // .not().isEmpty().withMessage('Product image cant be empty')
+],async (req, res) => {
+  const errors = validationResult(req);
+  // If error not occure    
+      if (!errors.isEmpty()) {
+      return res.status(422).json({ errors: errors.array() 
+      });
+  }
+  try {
+      const { body,file } = req;
+      const product = new Product({...body,file: `${file.destination}${file.filename}`});
+      const result = await product.save();
+      if(!result){
+          res.status(500).json({
+              result,
+              message: " Product  not add  sucessfull try again later",
+              sucess:false
+              });
+      }else if(result){
+          res.status(200).json({
+              files: req.file,
+              body: req.body,
+              result,
+              message:"Add-Product Sucessfully",
+              sucess:true
+          })
+      } 
+  
+  } catch (error) {
+      res.status(500).json({
+      message:error.message || "An unexpected error occure while processing your request.",
+      sucess:false
+      });
+      }
+  });  
+ 
+//Product List
+app.post("/showproduct1",async (req, res) => {
+// First read existing users.
+try {
+  const { body } = req;
+  const C_id =req.body.Cid;
+ // const Skip =req.body.skip;
+ // const Limit =req.body.limit;
+ //console.log("hello ",Skip);
+ //console.log("Limit ",Limit);
+const result = await Product.count({_id: C_id},function (err, results) {
+});
+//console.log(count);
+res.status(200).json({
+result,
+message: "Data get.",
+});
+} catch (error) {
+res.status(500).json({
+message:
+error.message ||
+"An unexpected error occure while processing your request.",
+});
+}
+});    
+
+//Product List
+app.post("/showproduct",async (req, res) => {
+// First read existing users.
+try {
+  const { body } = req;
+  const C_id =req.body.Cid;
+  const Skip =req.body.skip;
+  const Limit =req.body.limit;
+ //console.log("hello ",Skip);
+ //console.log("Limit ",Limit);
+const result = await Product.find({_id: C_id}).limit(Limit).skip(Skip);
+res.status(200).json({
+result,
+Skip,
+message: "Data get.",
+});
+} catch (error) {
+res.status(500).json({
+message:
+error.message ||
+"An unexpected error occure while processing your request.",
+});
+}
+});
+
+//Search product
+app.post("/searchProduct",async (req, res) => {
+  // First read existing users.
+  try {
+    const { body } = req;
+    
+    const Name = body.name
+   
+  const result = await Product.find({name:Name});
+  res.status(200).json({
+  result,
+  message: "Data get.",
+  });
+  } catch (error) {
+  res.status(500).json({
+  message:
+  error.message ||
+  "An unexpected error occure while processing your request.",
+  });
+  }
+  });
+
+//User Profile
+app.post("/profile",async (req, res) => {
+// First read existing users.
+try {
+  const { body } = req;
+  const C_id =req.body.Cid;
+const result = await User.findOne({_id: C_id});
+res.status(200).json({
+result,
+message: "Data get.",
+});
+} catch (error) {
+res.status(500).json({
+message:
+error.message ||
+"An unexpected error occure while processing your request.",
+});
+}
+});
+
+// search product by price
+app.post("/searchProductByPrice",async (req, res) => {
+  // First read existing users.
+  try {
+    const { body } = req;
+    const match = body.sort;
+    var myshort;
+    //const Name = body.name
+    if(match=='desending')
+    {
+     myshort = {price:-1}
+    }
+    else{
+    myshort = {price:1}
+    }
+  const result = await Product.find().sort(myshort);
+  res.status(200).json({
+  result,
+  message: "Data get.",
+  });
+  } catch (error) {
+  res.status(500).json({
+  message:
+  error.message ||
+  "An unexpected error occure while processing your request.",
+  });
+  }
+  });
+
+//User Profile
+app.post("/profile",async (req, res) => {
+// First read existing users.
+try {
+  const { body } = req;
+  const C_id =req.body.Cid;
+const result = await User.findOne({_id: C_id});
+res.status(200).json({
+result,
+message: "Data get.",
+});
+} catch (error) {
+res.status(500).json({
+message:
+error.message ||
+"An unexpected error occure while processing your request.",
+});
+}
+});
+
+app.post("/profileUpdate",upload.single('file'),async (req, res) => {
+  try {
+  const { body,file } = req;
+  let obj = body;
+  if (body.imageUpdated === "true") {
+  obj = {
+  ...obj,
+  file: `${file.destination}${file.filename}`
+  };
+  }
+  const result = await User.findOneAndUpdate({ _id: req.body.Cid},{$set: obj});
+  
+    res.status(200).json({
+      files: req.file,
+      body: req.body,
+  result,
+  message: "data updated"
+  })
+  } catch (error) {
+  res.status(500).json({
+  message: error.message
+  });
+  }
+  });
+
+app.get("/getItem/:_id",async (req, res) => {
+  try {
+  const result = await Product.findById({ _id: req.params._id });
+  if(result){
+  res.status(200).json({
+  result,
+  message: "Data found."
+  });}
+  } catch (error) {
+  res.status(500).json({
+  message: error.message || "unwanted error occured"
+  });
+  }
+  });
+  app.delete("/deleteItem/:_id", async (req, res) => {
+  try {
+  const { params } = req;
+  const result = await Product.findByIdAndDelete({ _id: req.params._id });
+  res.status(200).json({
+    result,
+  message: "item Deleted."
+  });
+  } catch (error) {
+  res.status(500).json({
+  message:
+  error.message ||
+  "An unexpected error occure while processing your request."
+  });
+  }
+  });
+  app.post("/editItem/:_id",upload.single('file'),async (req, res) => {
+  try {
+  const { body,file } = req;
+  let obj = body;
+  if (body.imageUpdated === "true") {
+  obj = {
+  ...obj,
+  file: `${file.destination}${file.filename}`
+  };
+  }
+  const result = await Product.findByIdAndUpdate({ _id: req.params._id},{$set:obj });
+  if(result){
+    res.status(200).json({
+      files: req.file,
+      body: req.body,
+  result,
+  message: "data updated"
+  });}
+  } catch (error) {
+  res.status(500).json({
+  message: error.message
+  });
+  }
+  });  
+
 
 app.post("/forgotPassword", [
   check("email")
