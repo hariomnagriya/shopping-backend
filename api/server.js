@@ -1,6 +1,5 @@
 const express = require("express");
 const app = express();
-
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
 mongoose.connect("mongodb://localhost/product", { useNewUrlParser: true });
@@ -8,27 +7,23 @@ const User = require("./model/users");
 const cors = require("cors");
 var bcrypt = require("bcrypt");
 const crypto = require("crypto");
-app.use(cors());
-
-const { check, body, validationResult } = require("express-validator/check");
+var path = require('path')
+const { check, validationResult } = require("express-validator/check");
 const nodemailer = require("nodemailer");
-
 const multer = require("multer");
-var jwt = require("jsonwebtoken");
-var upload = multer({
-  dest: "uploads/"
-  //   fileFilter: function(req, file, cb) {
-  //     var filetypes = /jpeg|jpg|json/;
-  //     var mimetype = filetypes.test(file.mimetype);
-  //     //var extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-  //     if (mimetype && extname) {
-  //       return cb(null, true);
-  //     }
-  //     cb(
-  //       "Error: File upload only supports the following filetypes - " + filetypes
-  //     );
-  //   }
-});
+var upload = multer({ dest: './uploads/',
+
+fileFilter: function (req, file, cb) {
+   var filetypes = /jpeg|jpg|png/;
+   var mimetype = filetypes.test(file.mimetype);
+   var extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+   if (mimetype && extname) {
+   return cb(null, true);
+   }
+   cb("Error: File upload only supports the following filetypes - " + filetypes);
+   }
+   });
+   var jwt = require("jsonwebtoken");
 
 const verifyToken = (req, res, next) => {
   console.log(req.headers["authorization"]);
@@ -38,7 +33,7 @@ const verifyToken = (req, res, next) => {
     });
   }
   const token = req.headers["authorization"].replace("Bearer ", "");
-  jwt.verify(token, "nikita", function(err, decoded) {
+  jwt.verify(token, "nikita", function (err, decoded) {
     if (err) {
       return res.status(401).json({
         message: "Invalid token"
@@ -48,7 +43,7 @@ const verifyToken = (req, res, next) => {
     next();
   });
 };
-
+app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static(__dirname));
 
@@ -128,11 +123,7 @@ app.post(
       const salt = bcrypt.genSaltSync(5);
       const hash = bcrypt.hashSync(Password, salt);
       req.body.password = hash;
-      const user = new User({
-        ...body,
-        // file: `${file.destination}${file.filename}`,
-        password: hash
-      });
+      const user = new User({ ...body, file: `${file.destination}${file.filename}`, password: hash });
       const result = await user.save();
       if (!result) {
         res.status(500).json({
@@ -164,7 +155,7 @@ app.post(
           subject: "SignUp ",
           text: "Welcome " + req.body.name + " you are sucessfully Registerd ! "
         };
-        transporter.sendMail(mailOptions, function(error, info) {
+        transporter.sendMail(mailOptions, function (error, info) {
           if (error) {
             console.log(error);
           } else {
@@ -185,7 +176,188 @@ app.post(
     }
   }
 );
-var server = app.listen(8080, function() {
+
+app.post("/forgotPassword", [
+  check("email")
+    .not().isEmpty().withMessage("Email can't be empty")
+    .isEmail().withMessage('Enter the valid email.')
+    .trim()
+    .normalizeEmail()
+],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        errors: errors.array()
+      });
+    }
+    try {
+      const user = await User.findOne({
+        email: req.body.email
+      });
+      if (!user) {
+        console.error("email not in database");
+        res.status(400).json({
+          message: "Email does not exist, Plesae enter right email ",
+          success: false
+        });
+      } else {
+        const token = crypto.randomBytes(20).toString("hex");
+        const user = await User.findOneAndUpdate(
+          { email: req.body.email },
+          {
+            $set: {
+              resetPasswordToken: token,
+              resetPasswordExpires: Date.now() + 750000
+            }
+          }
+        );
+        if (user) {
+          res.status(200).json({
+            user,
+            message: "data get"
+          });
+
+          const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: "hariom.chapter247@gmail.com",
+              pass: "hariom@247"
+            }
+          });
+
+          const mailOptions = {
+            from: "hariom.chapter247@gmail.com",
+            to: `${user.email}`,
+            subject: "Link To Reset Password",
+            text:
+              "You are receiving this because you (or someone else) have requested the reset of the password for your account.\n\n" +
+              "Please click on the following link, or paste this into your browser to complete the process within one hour of receiving it:\n\n" +
+              `http://192.168.2.107:3000/reset/${token}\n\n` +
+              "If you did not request this, please ignore this email and your password will remain unchanged.\n"
+          };
+
+          console.log("sending mail");
+
+          transporter.sendMail(mailOptions, (err, response) => {
+            if (err) {
+              console.error("there was an error: ", err);
+            } else {
+              console.log("here is the res: ", response);
+              res.status(200).json("recovery email sent");
+            }
+          });
+        } else {
+          res.status(501).json({
+            message:
+              error.message ||
+              "An unexpected error occure while processing your request.",
+          });
+        }
+      }
+    } catch (error) {
+      res.status(500).json({
+        message:
+          error.message ||
+          "An unexpected error occure while processing your request.",
+      });
+    }
+  }
+);
+
+// const Op = Sequelize.Op;
+app.get("/reset/:token1", async (req, res) => {
+
+  const user = await User.findOne({
+    resetPasswordToken: req.params.token1,
+    resetPasswordExpires: {
+      $gt: Date.now()
+    }
+  });
+
+  console.log("user");
+  console.log(user);
+  if (!user) {
+    console.error("password reset link is invalid or has expired");
+    res.status(403).send("password reset link is invalid or has expired");
+  } else {
+    res.status(200).send({
+      user,
+      message: "password reset link a-ok"
+    });
+  }
+});
+
+app.put("/updatePasswordViaEmail", [
+  check("email")
+    .not().isEmpty().withMessage('Email cant be empty.')
+    .isEmail().withMessage('Enter the valid email.'),
+  check("password")
+    .not().isEmpty().withMessage('Password cant be empty.')
+    .isLength({ min: 6 }).withMessage('Must be at least 8 chars long.')
+    .isLength({ max: 13 }).withMessage('Max length of password is 13.')
+    .custom((value, { req }) => {
+      if (value !== req.body.cpassword) {
+        throw new Error('Password confirmation is incorrect.');
+      }
+      return true;
+    })
+    .withMessage("Password did't match.")], async (req, res) => {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(422).json({
+          errors: errors.array()
+        });
+      }
+      const user = User.findOne({
+        email: req.body.email,
+        resetPasswordToken: req.body.resetPasswordToken,
+        resetPasswordExpires: {
+          $gt: Date.now()
+        }
+      });
+      console.log("req.body.token");
+      console.log(req.body.resetPasswordToken);
+      if (!user) {
+        console.error("password reset link is invalid or has expired");
+        res.status(403).send("password reset link is invalid or has expired");
+      } else if (user != null) {
+        console.log("user exists in db");
+        const Password = req.body.password;
+        const salt = bcrypt.genSaltSync(5);
+        const hash = bcrypt.hashSync(Password, salt);
+        req.body.password = hash;
+        const user = await User.findOneAndUpdate(
+          {
+            email: req.body.email,
+            resetPasswordToken: req.body.resetPasswordToken,
+            resetPasswordExpires: {
+              $gt: Date.now()
+            }
+          },
+          {
+            $set: {
+              resetPasswordToken: null,
+              resetPasswordExpires: null,
+              password: hash
+            }
+          }
+        );
+        // console.log("password");
+        // console.log(hashedPassword);
+
+        if (user) {
+          console.log("password updated");
+          res.status(200).send({ message: "password updated" });
+        }
+      } else {
+        console.error("no user exists in db to update");
+        res.status(401).json("no user exists in db to update");
+      }
+    });
+
+
+var server = app.listen(8080, function () {
   var host = server.address().address;
   var port = server.address().port;
   console.log("Example app listening at http://%s:%s", host, port);
