@@ -3,8 +3,11 @@ const Schema = mongoose.Schema;
 
 const product = {
   name: String,
-  file: String,
-  price: Number
+  thumbnail: String,
+  otherImg : Array,
+  price: Number,
+  createTime :String,
+  updateTime :String
 };
 
 const ProductModel = mongoose.model("Product", product);

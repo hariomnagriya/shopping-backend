@@ -103,16 +103,13 @@ app.post(
       .not()
       .isEmpty()
       .withMessage("gender is required"),
-    check("file")
-      .not()
-      .isEmpty()
-      .withMessage("image is required")
+    // check("file")
+    //   .not()
+    //   .isEmpty()
+    //   .withMessage("image is required")
   ],
   async (req, res) => {
     const errors = validationResult(req);
-    console.log(req);
-    console.log(errors);
-    console.log("errors");
     if (!errors.isEmpty()) {
       return res.status(422).json({
         message: errors.array(),
@@ -254,7 +251,7 @@ app.post(
 );
 
 //Add the Product 
-app.post('/addProduct',upload.single('file'),[
+app.post('/addProduct',upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'gallery', maxCount: 8 }]),[
   //Product-title validation
   check('name')
   .not().isEmpty().withMessage('Product name cant be empty.'),
@@ -276,8 +273,13 @@ app.post('/addProduct',upload.single('file'),[
       });
   }
   try {
-      const { body,file } = req;
-      const product = new Product({...body,file: `${file.destination}${file.filename}`});
+      const { body,files} = req;
+      const len = files['gallery'].length;
+      var other= new Array();
+      for(n=0;n<len;n++){
+      other[n]= `${files['gallery'][n].destination}${files['gallery'][n].filename}`;
+      }
+      const product = new Product({...body,thumbnail: `${files['thumbnail'][0].destination}${files['thumbnail'][0].filename}`,otherImg:other});
       const result = await product.save();
       if(!result){
           res.status(500).json({
@@ -500,14 +502,20 @@ app.get("/getItem/:_id",async (req, res) => {
   });
   }
   });
-  app.post("/editItem/:_id",upload.single('file'),async (req, res) => {
+  app.post("/editItem/:_id",upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'gallery', maxCount: 8 }]),async (req, res) => {
   try {
-  const { body,file } = req;
+  const { body,files } = req;
   let obj = body;
+  const len = files['gallery'].length;
+  var other= new Array();
+      for(n=0;n<len;n++){
+      other[n]= `${files['gallery'][n].destination}${files['gallery'][n].filename}`;
+      }
+      body.imageUpdated="true";
   if (body.imageUpdated === "true") {
   obj = {
   ...obj,
-  file: `${file.destination}${file.filename}`
+  thumbnail: `${files['thumbnail'][0].destination}${files['thumbnail'][0].filename}`,otherImg:other
   };
   }
   const result = await Product.findByIdAndUpdate({ _id: req.params._id},{$set:obj });
