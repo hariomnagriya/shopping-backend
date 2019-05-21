@@ -279,6 +279,10 @@ app.post('/addProduct',upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name
       for(n=0;n<len;n++){
       other[n]= `${files['gallery'][n].destination}${files['gallery'][n].filename}`;
       }
+      const today = new Date();
+        var time = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate() + ' / ' + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+        body.createTime=time;;
+        body.updateTime=time;
       const product = new Product({...body,thumbnail: `${files['thumbnail'][0].destination}${files['thumbnail'][0].filename}`,otherImg:other});
       const result = await product.save();
       if(!result){
@@ -505,13 +509,15 @@ app.get("/getItem/:_id",async (req, res) => {
   app.post("/editItem/:_id",upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'gallery', maxCount: 8 }]),async (req, res) => {
   try {
   const { body,files } = req;
-  let obj = body;
   const len = files['gallery'].length;
   var other= new Array();
       for(n=0;n<len;n++){
       other[n]= `${files['gallery'][n].destination}${files['gallery'][n].filename}`;
       }
+      const today = new Date();
+      var time = today.getFullYear() + '-' + (today.getMonth() + 1) + '-' + today.getDate() + ' / ' + today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();   body.updateTime =time;
       body.imageUpdated="true";
+      let obj = body;
   if (body.imageUpdated === "true") {
   obj = {
   ...obj,
