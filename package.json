@@ -15,7 +15,7 @@
     "mongoose": "^5.5.9",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-scripts": "3.0.1",
+    "react-scripts": "5.0.1",
     "react-stripe-checkout": "^2.6.3",
     "stripe": "^7.1.0",
     "uuid": "^3.3.2"
